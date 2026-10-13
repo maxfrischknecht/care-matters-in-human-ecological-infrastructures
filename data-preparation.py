@@ -27,7 +27,7 @@ Run with:
 
     python data-conversion.py
 
-Output is written to ``export/metadata.csv`` and ``export/metadata.json``.
+Output is written to ``export/dataset.csv``.
 """
 
 from __future__ import annotations
@@ -47,10 +47,6 @@ WRITE_OUTPUT = True
 
 # Prefix applied to per-file metadata keys.
 FILE_PREFIX = "file_"
-
-# Fields that are "encouraged". Anything else that shows up is reported as a
-# freely-chosen metadata type.
-ENCOURAGED_FIELDS = {"title", "authors", "tags", "timestamp", "description"}
 
 # Columns treated as comma-separated lists. Names are WITHOUT the file_ prefix,
 # so "authors" covers both the dataset `authors` and the file `file_authors`.
@@ -219,7 +215,6 @@ def merge_folder_file_meta(file_meta, folder_meta):
     
     return merged
         
-
 def main():
     folders = get_data_folders(DATA_DIR)
     # print(folders)
