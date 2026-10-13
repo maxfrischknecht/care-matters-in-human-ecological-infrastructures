@@ -1,21 +1,21 @@
-"""Convert the care-infrastructures data folders into a single table.
+"""
+Convert the care-infrastructures data folders into a single table.
 
-Expected layout under DATA_DIR::
+Expected layout of the data folders:
 
-    <Day1_SessionTitle_DataSetTitle>/   one folder per data item
-        meta.txt                  dataset metadata (applies to every file)
-        <file>.jpg                a data file
-        <file>.txt                that file's metadata (same stem)
-        <document>.txt            a data file that is itself a text document
+    <Day1_SessionTitle_DataSetTitle>/       one folder per data item
+        meta.txt                            dataset metadata (applies to every file)
+        <file>.jpg                          a data file
+        <file>.txt                          that file's metadata (same name)
+        <document>.txt                      a data file that is itself a text document
 
 The folder name is split on the first two ``_`` characters into ``day``,
 ``session`` and ``dataset_title`` (spaces within each part are kept).
 
 Every data file becomes one row:
 
-* dataset metadata (from ``meta.txt``) is used as-is,
-* file metadata (from ``<file>.txt``) is prefixed with ``file_`` so keys
-  never collide with the dataset keys,
+* dataset metadata (from ``meta.txt``) is used as-is and applies to every file in the dataset
+* file metadata (from ``<file>.txt``) is prefixed with ``file_`` so keys never collide with the dataset keys
 * ``file_path`` is relative to DATA_DIR, e.g. ``parent-folder/file.jpg``.
 
 Files without metadata keep null (NaN) metadata columns. Any metadata key
@@ -23,7 +23,7 @@ found anywhere becomes a column; keys that are not in ENCOURAGED_FIELDS are
 logged as freely-chosen types. Parsing problems are collected as warnings
 instead of raising, so a single bad file cannot abort the run.
 
-Run with::
+Run with:
 
     python data-conversion.py
 
@@ -31,21 +31,21 @@ Output is written to ``export/metadata.csv`` and ``export/metadata.json``.
 """
 
 from __future__ import annotations
-
 import re
 from pathlib import Path
-
 import pandas as pd
 
 # --------------------------------------------------------------------------
-# Configuration
+# SETUP
 # --------------------------------------------------------------------------
-BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
-OUTPUT_DIR = BASE_DIR / "export"
+DATA_DIR = "./data-example/"
+OUTPUT_DIR = "./export"
+EXPORT_FILENAME = "dataset.csv"
+
+# toggle if output is generated
 WRITE_OUTPUT = True
 
-# Prefix applied to per-file (companion .txt) metadata keys.
+# Prefix applied to per-file metadata keys.
 FILE_PREFIX = "file_"
 
 # Fields that are "encouraged". Anything else that shows up is reported as a
@@ -54,287 +54,220 @@ ENCOURAGED_FIELDS = {"title", "authors", "tags", "timestamp", "description"}
 
 # Columns treated as comma-separated lists. Names are WITHOUT the file_ prefix,
 # so "authors" covers both the dataset `authors` and the file `file_authors`.
+# Update this if new meta data appears that should become a list
 LIST_FIELDS = {"authors", "tags", "sensor"}
-
-# List fields whose values may also be space-separated / `#`-prefixed tags.
-TAG_FIELDS = {"tags"}
 
 # Row-identity columns (always present, never list-parsed or prefixed).
 IDENTITY_COLS = [
-    "file",
+    "file_name",
     "file_path",
+    "file_type",
     "folder",
     "day",
     "session",
     "dataset_title",
-    "file_type",
 ]
 
-# Metadata files ignored on the assumption they belong to another file.
+# Files that are for metadata of and are not treated as regular data files
 RESERVED_NAMES = {"meta.txt"}
+
+warnings = []
 
 # --------------------------------------------------------------------------
 # Parsing
 # --------------------------------------------------------------------------
 KEY_VALUE_RE = re.compile(r"^(?P<key>[\w.\-]+)\s*:\s*(?P<value>.*)$")
 
-
-def parse_metadata(path: Path) -> tuple[dict[str, str | None], list[str]]:
-    """Parse one metadata file into a raw ``{key: string}`` mapping.
-
-    Returns ``(metadata, warnings)``. I/O and format problems are reported as
-    warnings rather than raised.
+# A function that iterates over every folder inside /data
+def get_data_folders(data_dir):
     """
-    path = Path(path)
-    meta: dict[str, str | None] = {}
-    warnings: list[str] = []
-
-    if not path.exists():
-        return meta, [f"missing metadata file: {path}"]
-
-    try:
-        text = path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        text = path.read_text(encoding="utf-8", errors="replace")
-        warnings.append(f"{path}: non-UTF-8 bytes (decoded with replacement)")
-    except OSError as exc:
-        return meta, [f"{path}: could not read ({exc})"]
-
-    for lineno, raw in enumerate(text.splitlines(), start=1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue  # blank line or comment
-
-        match = KEY_VALUE_RE.match(line)
-        if not match:
-            warnings.append(f"{path}:{lineno}: cannot parse {raw!r}")
-            continue
-
-        key = match.group("key").strip().lower()
-        value = match.group("value").strip().strip("'\"")
-        meta[key] = value or None
-
-    return meta, warnings
-
-
-def base_field(key: str) -> str:
-    """Field name without the ``file_`` prefix."""
-    return key[len(FILE_PREFIX):] if key.startswith(FILE_PREFIX) else key
-
-
-def split_list(value: str, is_tags: bool) -> list[str]:
-    """Split a raw string into list items.
-
-    Tag fields are additionally split on whitespace and stripped of leading
-    ``#`` characters.
+    Yield every data folder inside ``data_dir`` as a ``Path``.
+    Hidden folders and files are skipped; results are sorted by name.
     """
-    raw = re.split(r"[,\s]+", value) if is_tags else value.split(",")
-    items: list[str] = []
-    for part in raw:
-        part = part.strip().strip("'\"").lstrip("#").strip()
-        if part:
-            items.append(part)
-    return items
-
-
-def parse_folder_name(name: str) -> tuple[int | str | None, str | None, str | None, list[str]]:
-    """Split ``Day[n]_SessionTitle_DataSetTitle`` into its three parts.
-
-    Only the first two ``_`` are used as delimiters, so spaces (and any
-    further ``_``) are preserved inside the parts. Returns
-    ``(day, session, dataset_title, warnings)``.
-    """
-    warnings: list[str] = []
-    parts = name.split("_", 2)
-    if len(parts) != 3:
-        warnings.append(
-            f"{name}: folder name does not match Day[n]_SessionTitle_DataSetTitle"
-        )
-        return None, None, None, warnings
-
-    day_raw, session, dataset_title = (p.strip() for p in parts)
-
-    match = re.search(r"\d+", day_raw)
-    if match:
-        day: int | str = int(match.group())
-    else:
-        day = day_raw
-        warnings.append(f"{name}: no day number found in {day_raw!r}")
-
-    return day, session or None, dataset_title or None, warnings
-
-
-# --------------------------------------------------------------------------
-# Directory walking
-# --------------------------------------------------------------------------
-def _is_metadata_txt(file: Path, by_stem: dict[str, list[Path]]) -> bool:
-    """True if a ``.txt`` file is the metadata companion of a data file.
-
-    A ``.txt`` is metadata only when a sibling with the same stem exists that
-    has a different (non-``.txt``) extension. Otherwise it is itself data
-    (e.g. a text document).
-    """
-    if file.suffix.lower() != ".txt":
-        return False
-    return any(other.suffix.lower() != ".txt" for other in by_stem.get(file.stem, []))
-
-
-def collect_rows(root: Path) -> tuple[list[dict], list[str]]:
-    """Build one raw row per data file under ``root`` (never skips a file)."""
-    root = Path(root)
+    root = Path(data_dir)
+    # print(root)
+    # check if the data dictionary is there
     if not root.is_dir():
-        raise FileNotFoundError(f"data directory not found: {root}")
+        print(f"data directory not found: {root}")
+        return
 
-    rows: list[dict] = []
-    warnings: list[str] = []
+    # iterate over all folders
+    folders = []
+    for entry in sorted(root.iterdir()):
+        if entry.is_dir() and not entry.name.startswith("."):
+            folders.append(entry)
 
-    folders = [root] + sorted(p for p in root.rglob("*") if p.is_dir())
+    return folders
 
-    for folder in folders:
-        files = [
-            f for f in folder.iterdir()
-            if f.is_file() and not f.name.startswith(".")
-        ]
-        if not files:
-            continue
+# A function to open a folder, look up the meta.txt and all files
+def get_folder_meta(folder_path):
+    path = Path(folder_path)
+    print("folder to get meta:", path, "\n")
+    
+    # build identity fields from the folder name:
+    # <Day>_<Session>_<DatasetTitle>, split on the first two "_" (spaces kept)
+    name_parts = path.name.split("_", 2)
+    meta = {
+        "folder": path.name,
+        "day": name_parts[0] if len(name_parts) > 0 else "",
+        "session": name_parts[1] if len(name_parts) > 1 else "",
+        "dataset_title": name_parts[2] if len(name_parts) > 2 else "",
+    }
 
-        by_stem: dict[str, list[Path]] = {}
-        for f in files:
-            by_stem.setdefault(f.stem, []).append(f)
-
-        # --- dataset metadata (folder meta.txt), keys kept as-is ---
-        dataset_meta: dict[str, str | None] = {}
-        meta_txt = folder / "meta.txt"
-        if meta_txt.exists():
-            dataset_meta, w = parse_metadata(meta_txt)
-            warnings += w
-
-        # --- folder name -> day / session / dataset_title ---
-        day, session, dataset_title, w = parse_folder_name(folder.name)
-        warnings += w
-
-        for file in sorted(files):
-            if file.name in RESERVED_NAMES or _is_metadata_txt(file, by_stem):
-                continue  # not a data file
-
-            try:
-                # --- file metadata (companion .txt), keys prefixed ---
-                companion = folder / (file.stem + ".txt")
-                if companion.exists() and companion != file:
-                    file_meta, w = parse_metadata(companion)
-                    warnings += w
+    
+    # try to to get the metadata file
+    meta_path = path / "meta.txt"
+    if not meta_path.exists():
+        print(f"no meta.txt found in {path}")
+        return {}
+    
+    # go through every line in meta.txt and create key:value pairs
+    with open(meta_path, "r") as meta_file:
+        for line in meta_file:
+            line = line.strip()
+            if not line:
+                continue
+            match = KEY_VALUE_RE.match(line)
+            if match:
+                key = match.group("key")
+                if key in LIST_FIELDS:
+                    # create a list out of the string
+                    list_values = match.group("value").replace(",", " ").split()
+                    # remove # hashtags
+                    list_values = [v.lstrip("#") for v in list_values if v.lstrip("#")]
+                    # add to meta
+                    meta[key] = list_values
                 else:
-                    file_meta = {}
-                    if file.suffix.lower() != ".txt":
-                        warnings.append(
-                            f"{file.relative_to(root)}: no companion "
-                            f"{companion.name} (file metadata null)"
-                        )
+                    value = match.group("value").strip().strip('"')
+                    meta[key] = value
 
-                row = {
-                    "file": file.name,
-                    "file_path": file.relative_to(root).as_posix(),
-                    "folder": folder.name,
-                    "day": day,
-                    "session": session,
-                    "dataset_title": dataset_title,
-                    "file_type": file.suffix.lower().lstrip("."),
-                }
-                row.update(dataset_meta)
-                row.update({FILE_PREFIX + k: v for k, v in file_meta.items()})
-                rows.append(row)
-            except Exception as exc:  # one bad file cannot kill the run
-                warnings.append(f"{file}: unexpected error ({exc})")
+    # print(meta)
+    return meta
 
-    return rows, warnings
+# Get files and file meta
+def get_files_meta(folder_path):
+    root = Path(folder_path)
+    
+    # get every file in the folder (skip hidden files and reserved meta.txt)
+    all_files = [
+        f for f in sorted(root.iterdir())
+        if f.is_file() and not f.name.startswith(".") and f.name not in RESERVED_NAMES
+    ]
 
+    # get all file names
+    data_filenames = set()
+    for f in all_files:
+        if f.suffix.lower() != ".txt":
+            data_filenames.add(f.stem)
+    
+     # split into data files and (sidecar) metadata files
+    data_files = []
+    meta_files = []
+    for f in all_files:
+        if f.suffix.lower() == ".txt" and f.stem in data_filenames:
+            meta_files.append(f)   # a .txt whose stem matches a non-.txt sibling
+        else:
+            data_files.append(f)   # real data: media files + standalone .txt documents
+            
+    # pair each data file with its same-name .txt metadata file
+    files_meta = []
+    for data_file in data_files:
+        
+        # add filename and filepath
+        entry = {
+            "file_name": data_file.name,
+            "file_path": str(data_file),
+            "file_type": data_file.suffix.lower().lstrip("."),
+        }
 
-# --------------------------------------------------------------------------
-# DataFrame assembly
-# --------------------------------------------------------------------------
-def build_dataframe(raw_rows: list[dict]) -> tuple[pd.DataFrame, list[str]]:
-    """Convert raw rows into a DataFrame with list columns expanded."""
-    rows: list[dict] = []
-    for raw in raw_rows:
-        row: dict = {}
-        for key, value in raw.items():
-            if key in IDENTITY_COLS or value is None:
-                row[key] = value
-            elif base_field(key) in LIST_FIELDS:
-                row[key] = split_list(value, base_field(key) in TAG_FIELDS)
-            else:
-                row[key] = value
-        rows.append(row)
+        # find the matching meta file and create a dictionary to add to entry
+        meta_path = data_file.with_suffix(".txt")
+        if meta_path in meta_files:
+            with open(meta_path, "r") as meta_file:
+                for line in meta_file:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    match = KEY_VALUE_RE.match(line)
+                    if match:
+                        key = match.group("key")
+                        list_values = []
+                        # check if should become a list: 
+                        if key in LIST_FIELDS:
+                            # create a list out of the string
+                            list_values = match.group("value").replace(",", " ").split()
+                            # remove # hashtags
+                            list_values = [v.lstrip("#") for v in list_values if v.lstrip("#")]
+                            # add to entry
+                            entry[FILE_PREFIX + key] = list_values
+                        else:
+                            entry[FILE_PREFIX + match.group("key")] = (
+                                match.group("value").strip().strip('"')
+                            )
+        # append the found meta
+        files_meta.append(entry)
+        
+    
+    return files_meta
 
-    df = pd.DataFrame(rows)
-    meta_fields = sorted(set(df.columns) - set(IDENTITY_COLS))
+# merge folder and files meta
+def merge_folder_file_meta(file_meta, folder_meta):
+    # create a new merged dictionary with a copy of folder_meta
+    merged = folder_meta.copy()
+    # add the file meta
+    merged.update(file_meta)
+    
+    return merged
+        
 
-    enc_order = ["title", "authors", "tags", "timestamp", "description", "sensor"]
-    dataset_fields = [k for k in meta_fields if not k.startswith(FILE_PREFIX)]
-    file_fields = [k for k in meta_fields if k.startswith(FILE_PREFIX)]
+def main():
+    folders = get_data_folders(DATA_DIR)
+    # print(folders)
+    
+    # all rows for all files in all folders
+    all_rows = []
+    
+    # iterate over every folder and collect the metadata
+    for folder in folders:
+        
+        # get the meta.txt from each folder
+        folder_meta = get_folder_meta(folder)
+        print("Folder Meta: \n__________________________________ \n")
+        print(folder_meta, "\n")
+        
+        # iterate over all files and their metadata inside a folder
+        folder_files_meta = get_files_meta(folder)
+        print("Files Meta: \n__________________________________ \n")
+        print(folder_files_meta, "\n")
+        
+        
+        # iterate over each folder file meta and combine it with the folder meta
+        for file_meta in folder_files_meta:
+            merged_row = merge_folder_file_meta(file_meta, folder_meta)
+            # add to list with all rows from all files in all folders
+            all_rows.append(merged_row)
+            print("Merged Meta: \n__________________________________ \n")
+            print(merged_row, "\n")
+            
+    # create dataframe         
+    # one row per file; pandas unions all keys -> missing keys become NaN
+    df = pd.DataFrame(all_rows).fillna("")
+    
+    # stable, readable column order
+    leading = [c for c in IDENTITY_COLS if c in df.columns]
+    rest = [c for c in df.columns if c not in leading]
+    df = df[leading + rest]
 
-    def ordered(fields: list[str], prefix: str = "") -> list[str]:
-        preferred = [prefix + f for f in enc_order if prefix + f in fields]
-        return preferred + [f for f in fields if f not in preferred]
+    print("Finished DF: \n__________________________________ \n")
+    print(df, "\n")
 
-    columns = IDENTITY_COLS + ordered(dataset_fields) + ordered(file_fields, FILE_PREFIX)
-    return df[columns], meta_fields
-
-
-def report(df: pd.DataFrame, meta_fields: list[str], warnings: list[str]) -> None:
-    list_cols = [k for k in meta_fields if base_field(k) in LIST_FIELDS]
-    scalar_cols = [k for k in meta_fields if base_field(k) not in LIST_FIELDS]
-    print(f"Rows: {len(df)}   Columns: {df.shape[1]}")
-    print("List columns  :", ", ".join(list_cols) or "(none)")
-    print("Scalar columns:", ", ".join(scalar_cols) or "(none)")
-
-    print("\nFreely-chosen fields (not in ENCOURAGED_FIELDS):")
-    free = [k for k in meta_fields if base_field(k) not in ENCOURAGED_FIELDS]
-    for key in free:
-        n_null = int(df[key].isna().sum())
-        print(f"  {key}: {len(df) - n_null} present / {n_null} null")
-    if not free:
-        print("  (none)")
-
-    print("\nNull count per metadata field:")
-    for key in meta_fields:
-        print(f"  {key:<20} {int(df[key].isna().sum())} / {len(df)} null")
-
-    print("\nWarnings:")
-    for warning in warnings or ["  (none)"]:
-        print(" \u2022", warning)
-
-
-def save(df: pd.DataFrame, list_cols: list[str]) -> None:
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    df_out = df.copy()
-    for col in list_cols:
-        if col in df_out.columns:
-            df_out[col] = df_out[col].apply(
-                lambda v: "; ".join(v) if isinstance(v, list) else v
-            )
-    csv_path = OUTPUT_DIR / "metadata.csv"
-    json_path = OUTPUT_DIR / "metadata.json"
-    df_out.to_csv(csv_path, index=False)
-    df.to_json(json_path, orient="records", indent=2, force_ascii=False)
-    print(f"\nWrote {csv_path}")
-    print(f"Wrote {json_path}")
-
-
-def main() -> None:
-    print("Starting data conversion...")
-    raw_rows, warnings = collect_rows(DATA_DIR)
-    df, meta_fields = build_dataframe(raw_rows)
-    report(df, meta_fields, warnings)
-
+    # export
     if WRITE_OUTPUT:
-        list_cols = [k for k in meta_fields if base_field(k) in LIST_FIELDS]
-        save(df, list_cols)
+        export_dir = Path(OUTPUT_DIR)
+        df.to_csv(export_dir / EXPORT_FILENAME)
+        print("Exporting ... \n__________________________________ Done 🎈 \n")
 
-    print("\nPreview:")
-    print(df.head().to_string())
-
+        
 
 if __name__ == "__main__":
     main()
