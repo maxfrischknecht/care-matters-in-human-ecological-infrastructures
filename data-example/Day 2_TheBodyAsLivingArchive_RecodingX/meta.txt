@@ -1,0 +1,5 @@
+title: "A See of Flowers"
+authors: Max, Serena, Aylin
+tags: #autumn-school, #data-collection
+timestamp: 2026-10-13
+description: Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa quis enim.

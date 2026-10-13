@@ -1,0 +1,6 @@
+title: "Mountains with Trees"
+authors: Taylor, Dario
+tags: #alpinism, glaciers
+timestamp: 2026-10-14
+description: Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa quis enim.
+sensor: humidity, rain
