@@ -10,4 +10,5 @@ This repository holds the setup guide for the autumn schools local data collecti
 - [data-preparation.py](./data-preparation.py): A script to turn folders of data into tabular structure
 - [data-example](./data-example/): Example data for how the sessions data might look like
 - [export](./export/): Were CSV files generated out of the folder data are exported to
+- [data-analysis.ipynb](./data-analysis.ipynb): A notebook for data exploration
 - [sketches](./sketches): A place to collect visual engagements with the data
