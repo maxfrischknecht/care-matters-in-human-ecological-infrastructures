@@ -1,0 +1,94 @@
+[
+  {
+    "file":"discussion-1.txt",
+    "file_path":"Day 2_TheBodyAsLivingArchive_RecodingX\/discussion-1.txt",
+    "folder":"Day 2_TheBodyAsLivingArchive_RecodingX",
+    "day":2,
+    "session":"TheBodyAsLivingArchive",
+    "dataset_title":"RecodingX",
+    "file_type":"txt",
+    "title":"A See of Flowers",
+    "authors":[
+      "Max",
+      "Serena",
+      "Aylin"
+    ],
+    "tags":[
+      "autumn-school",
+      "data-collection"
+    ],
+    "timestamp":"2026-10-13",
+    "description":"Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa quis enim.",
+    "sensor":null,
+    "file_title":null,
+    "file_authors":null,
+    "file_tags":null,
+    "file_timestamp":null,
+    "file_location":null
+  },
+  {
+    "file":"Everest_North_Face_toward_Base_Camp_Tibet_Luca_Galuzzi_2006.jpg",
+    "file_path":"Day1_Methodologies of Care_Mountains\/Everest_North_Face_toward_Base_Camp_Tibet_Luca_Galuzzi_2006.jpg",
+    "folder":"Day1_Methodologies of Care_Mountains",
+    "day":1,
+    "session":"Methodologies of Care",
+    "dataset_title":"Mountains",
+    "file_type":"jpg",
+    "title":"Mountains with Trees",
+    "authors":[
+      "Taylor",
+      "Dario"
+    ],
+    "tags":[
+      "alpinism",
+      "glaciers"
+    ],
+    "timestamp":"2026-10-14",
+    "description":"Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa quis enim.",
+    "sensor":[
+      "humidity",
+      "rain"
+    ],
+    "file_title":"Everest North Face towards base camp, Tibet",
+    "file_authors":[
+      "Luca Galuzzi"
+    ],
+    "file_tags":[
+      "mountain",
+      "everest"
+    ],
+    "file_timestamp":"2016",
+    "file_location":"tibet"
+  },
+  {
+    "file":"Wetterfaenger-Saentis-vom-Kronberg-nach-einem-Wettersturz-im-Fruehling.jpg",
+    "file_path":"Day1_Methodologies of Care_Mountains\/Wetterfaenger-Saentis-vom-Kronberg-nach-einem-Wettersturz-im-Fruehling.jpg",
+    "folder":"Day1_Methodologies of Care_Mountains",
+    "day":1,
+    "session":"Methodologies of Care",
+    "dataset_title":"Mountains",
+    "file_type":"jpg",
+    "title":"Mountains with Trees",
+    "authors":[
+      "Taylor",
+      "Dario"
+    ],
+    "tags":[
+      "alpinism",
+      "glaciers"
+    ],
+    "timestamp":"2026-10-14",
+    "description":"Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa quis enim.",
+    "sensor":[
+      "humidity",
+      "rain"
+    ],
+    "file_title":"Säntis nach Wetterstürz im Frühling, vom Kronberg aus",
+    "file_authors":null,
+    "file_tags":[
+      "mountains"
+    ],
+    "file_timestamp":null,
+    "file_location":null
+  }
+]
