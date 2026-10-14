@@ -73,3 +73,9 @@ curl -fsSL https://opencode.ai/v2/install | bash
 
 The machine used in the autumn school is a Mac Mini with a M4 Chip an 28GB Ram, according to this [guide](https://insiderllm.com/guides/best-local-llms-mac-2026/), [Qwen 3.5](https://ollama.com/library/qwen3.5) was chosen. 
 
+## 6. Transcription.py
+
+```bash
+pip install "av==18.1.0"
+pip install faster-whisper
+```
