@@ -67,8 +67,6 @@ IDENTITY_COLS = [
 # Files that are for metadata of and are not treated as regular data files
 RESERVED_NAMES = {"meta.txt"}
 
-warnings = []
-
 # --------------------------------------------------------------------------
 # Parsing
 # --------------------------------------------------------------------------

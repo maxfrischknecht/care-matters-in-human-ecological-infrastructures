@@ -5,6 +5,7 @@
 
 data/
 data-example
+export/manifesta-dataset.csv
 
 # User-specific files
 *.rsuser
