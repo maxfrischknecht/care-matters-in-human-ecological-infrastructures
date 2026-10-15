@@ -1,5 +1,23 @@
 # Care Matters in Human-Ecological Infrastructures
 
+```bash
+_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-
+
+ ,-----.                       
+'  .--./ ,--,--.,--.--. ,---.  
+|  |    ' ,-.  ||  .--'| .-. : 
+'  '--'\ '-'  ||  |   \   --. 
+ `-----' `--`--'`--'    `----'     
+           
+,--.   ,--.          ,--.    ,--.                        
+|   `.'   | ,--,--.,-'  '-.,-'  '-. ,---. ,--.--. ,---.  
+|  |'.'|  |' ,-.  |'-.  .-''-.  .-'| .-. :|  .--'(  .-'  
+|  |   |  |\ '-'  |  |  |    |  |  \   --.|  |   .-'  `) 
+`--'   `--' `--`--'  `--'    `--'   `----'`--'   `----'       
+    
+_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-
+```
+
 "Care Matters in Human-Ecological Infrastructures" is a transdisciplinary [autumn school led by metaLAB (at) Basel](https://metalab.harvard.edu/e/caremattersbasel/) and co-produced with the metaLAB community (Harvard, Berlin, Basel), taking place during Mesh Festival Basel, October 14- 17, 2026.
 
 This repository holds the setup guide for the autumn schools local data collection and analysis computer. 
