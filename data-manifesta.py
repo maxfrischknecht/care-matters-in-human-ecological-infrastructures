@@ -263,6 +263,7 @@ def main():
     if WRITE_OUTPUT:
         export_dir = Path(OUTPUT_DIR)
         df.to_csv(export_dir / EXPORT_FILENAME)
+        df.to_json(export_dir / "manifesta-dataset.json")
         print("Exporting ... Done \n")
         print("_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-🌱_-")
 
