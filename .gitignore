@@ -9,6 +9,7 @@ sketches/fonts/
 sketches/media/
 sketches/data/
 file/
+export/*
 
 # User-specific files
 *.rsuser
